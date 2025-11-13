@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Minimal gSomnia logo (inspired by Somnia but original) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="gSomnia logo">
+  <defs>
+    <linearGradient id="gGrad" x1="0" x2="1">
+      <stop offset="0%" stop-color="#3aa0ff" />
+      <stop offset="100%" stop-color="#6ee7b7" />
+    </linearGradient>
+  </defs>
+  <!-- rounded square background -->
+  <rect x="4" y="4" width="112" height="112" rx="20" ry="20" fill="#0f1724" />
+
+  <!-- stylized g mark: circle + cutout -->
+  <g transform="translate(60,60)">
+    <!-- outer ring in gradient -->
+    <circle r="34" fill="url(#gGrad)" />
+    <!-- inner cutout to create G shape -->
+    <path d="M -20 -10 a 30 30 0 1 1 10 40 v -12 h 22 v -16 h -22 v -12" fill="#0f1724" />
+    <!-- highlight dot to suggest motion/orbit -->
+    <circle cx="28" cy="-18" r="4" fill="#e6eef8" opacity="0.9" />
+  </g>
+
+  <!-- thin border -->
+  <rect x="4" y="4" width="112" height="112" rx="20" ry="20" fill="none" stroke="#182031" stroke-width="1" />
+</svg>

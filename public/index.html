@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>gSomnia — Live</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="container">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <h1 class="cyberpunk-title">gSomnia</h1>
+        <button id="info-btn" class="info-btn" title="About">ℹ️</button>
+      </div>
+      <button id="ai-btn" class="ai-btn" title="AI Assistant">🤖 Ask AI</button>
+    </div>
+    
+    <div id="ai-panel" class="ai-panel" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h3 style="margin:0;color:#a855f7;font-size:16px;">AI Assistant</h3>
+        <button id="close-ai" style="background:transparent;border:none;color:#64748b;cursor:pointer;font-size:18px;">✕</button>
+      </div>
+      <div id="ai-chat" style="max-height:200px;overflow-y:auto;margin-bottom:12px;padding:8px;background:rgba(0,0,0,0.2);border-radius:6px;"></div>
+      <div style="display:flex;gap:8px;">
+        <input id="ai-input" type="text" placeholder="Ask about messages..." style="flex:1;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:8px;color:#e2e8f0;font-family:Arial,sans-serif;font-size:13px;">
+        <button id="ai-send" class="ai-send-btn">Send</button>
+      </div>
+    </div>
+    <div id="info-popup" class="info-popup" style="display:none;">
+      <div class="info-popup-content">
+        <button id="close-popup" class="close-popup">✕</button>
+        <h2>What is gSomnia?</h2>
+        <p>A real-time messaging app powered by Somnia's blazing-fast blockchain. Your messages are published on-chain, verified, and permanent.</p>
+        <p><strong>Why it matters:</strong> True ownership. Every message you send is cryptographically signed and stored on the blockchain—no central authority, no censorship, just pure decentralized communication.</p>
+        <p>Connect your wallet, publish a message, and watch it appear instantly on Somnia testnet. The future of messaging is here.</p>
+        <div style="background:rgba(16,185,129,0.1);padding:10px;border-radius:6px;border:1px solid rgba(16,185,129,0.3);margin-top:12px;">
+          <div style="color:#10b981;font-weight:600;margin-bottom:6px;">🏆 NFT Rewards</div>
+          <div style="font-size:13px;">Every 10th message sender (10th, 20th, 30th...) wins an NFT! Your address is verified on-chain. Winners: copy your address from the winners list and contact the team to claim.</div>
+        </div>
+      </div>
+    </div>
+    <div id="status"></div>
+    <div id="stream-info" class="info-box">Loading stream info…</div>
+    
+    <div id="toast" class="toast"></div>
+    
+    <div class="publish-section">
+      <div id="pub-status">Not connected</div>
+      <div style="display:flex;gap:8px;">
+        <button id="connect" class="wallet-btn">Connect Wallet</button>
+        <a href="https://cloud.google.com/application/web3/faucet/somnia/shannon" target="_blank" class="faucet-btn">Get Testnet Tokens</a>
+      </div>
+      <div style="margin-top:12px">
+        <textarea id="msg" placeholder="Type a message" rows="3" style="width:100%;" maxlength="280"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;margin-bottom:10px;">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="preset-btn" data-msg="gsomnia">gsomnia</button>
+            <button class="preset-btn" data-msg="$SOMI to da moon">$SOMI to da moon</button>
+            <button class="preset-btn" data-msg="LFG somnia">LFG somnia</button>
+          </div>
+          <span id="char-count" style="font-size:12px;color:#64748b;">0/280</span>
+        </div>
+        <button id="send" class="send-btn">Sign & Publish</button>
+      </div>
+      <div id="result"></div>
+    </div>
+    
+    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+      <input id="search" type="text" placeholder="Search messages or addresses..." style="flex:1;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px;color:#e2e8f0;font-family:Arial,sans-serif;font-size:14px;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#64748b;white-space:nowrap;">
+        <input type="checkbox" id="auto-refresh" checked style="cursor:pointer;">
+        Auto-refresh
+      </label>
+    </div>
+    <button id="refresh-btn" class="refresh-btn">🔄 Refresh Messages</button>
+    <div id="pagination" style="display:flex;gap:8px;margin-bottom:12px;justify-content:center;"></div>
+    <div id="empty-state" style="display:none;text-align:center;padding:40px;color:#64748b;">
+      <div style="font-size:48px;margin-bottom:12px;">💬</div>
+      <div style="font-size:16px;font-weight:600;margin-bottom:6px;">No messages yet</div>
+      <div style="font-size:14px;">Be the first to publish a message!</div>
+    </div>
+    <ul id="messages"></ul>
+    
+    <div style="background:rgba(16,185,129,0.1);border:2px solid rgba(16,185,129,0.4);padding:12px;border-radius:8px;margin-top:24px;text-align:center;">
+      <div style="font-size:20px;margin-bottom:6px;">🏆</div>
+      <div style="color:#10b981;font-weight:700;font-size:15px;margin-bottom:4px;">Every 10th Message Wins an NFT!</div>
+      <div style="color:#e2e8f0;font-size:13px;">Send the 10th, 20th, 30th... message to claim your reward NFT</div>
+      <div style="margin-top:8px;font-size:12px;color:#64748b;">NFT Contract: <span style="color:#a855f7;font-family:monospace;">0xd2b24B1a5345C17c0BCC022Ac0b2123353bd2122</span></div>
+    </div>
+    
+    <div id="milestone-winners" style="margin-top:12px;"></div>
+    <div id="claim-section" style="margin-top:12px;"></div>
+  </div>
+  <footer style="text-align:center;padding:24px 0;color:#64748b;font-size:13px;">
+    Built on Somnia ⚡
+  </footer>
+  <script src="/app.js"></script>
+</body>
+</html>

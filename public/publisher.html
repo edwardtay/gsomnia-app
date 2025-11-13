@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Publish — gSomnia</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="container">
+    <div style="display:flex;align-items:center;margin-bottom:8px">
+      <img src="/logo.svg" alt="gSomnia" class="logo" />
+      <h1>gSomnia — Publish Message</h1>
+    </div>
+    <div id="pub-status">Not connected</div>
+    <button id="connect">Connect Wallet</button>
+    <div style="margin-top:12px">
+      <div style="margin-bottom:8px">
+        <button class="preset-btn" data-msg="gsomnia">gsomnia</button>
+        <button class="preset-btn" data-msg="$SOMI to da moon">$SOMI to da moon</button>
+        <button class="preset-btn" data-msg="LFG somnia">LFG somnia</button>
+      </div>
+
+      <div style="margin-top:8px">
+        <textarea id="msg" placeholder="Type a message" rows="3" style="width:100%"></textarea>
+        <button id="send">Sign & Publish</button>
+      </div>
+    </div>
+    <div id="result" style="margin-top:12px; color:#9fb3d6"></div>
+    <p style="margin-top:16px"><a href="/">Back to feed</a></p>
+  </div>
+  <script src="/publisher.js"></script>
+</body>
+</html>
