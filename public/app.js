@@ -738,6 +738,25 @@ async function claimNFT(milestone) {
       }
     }
     
+    // Check contract configuration
+    try {
+      const publisherData = await provider.request({
+        method: 'eth_call',
+        params: [{ to: NFT_CONTRACT, data: '0xbe9a6555' }, 'latest']
+      });
+      const contractPublisher = '0x' + publisherData.slice(-40);
+      console.log('Contract publisher:', contractPublisher);
+      console.log('Expected publisher:', '0x909dAFb395eB281b92B317552E12133098D62881');
+      
+      if (contractPublisher.toLowerCase() !== '0x909dAFb395eB281b92B317552E12133098D62881'.toLowerCase()) {
+        showToast('Contract configured for different publisher', 'error');
+        console.error('Publisher mismatch!');
+        return;
+      }
+    } catch (configErr) {
+      console.error('Contract config check failed:', configErr);
+    }
+    
     const calldata = '0x379607f5' + milestone.toString(16).padStart(64, '0');
     console.log('Calldata:', calldata);
     
