@@ -1,8 +1,5 @@
 const statusEl = document.getElementById('status');
 const listEl = document.getElementById('messages');
-
-const es = new EventSource('/events');
-
 const statsEl = document.getElementById('stats');
 const streamInfoEl = document.getElementById('stream-info');
 const paginationEl = document.getElementById('pagination');
@@ -365,33 +362,7 @@ if (publishToggleBtn && publisherPanel) {
   });
 }
 
-// poll leaderboard every 5s
-// leaderboard removed from UI; no polling
 
-es.onopen = () => { statusEl.textContent = ''; statusEl.style.display = 'none'; };
-es.onerror = () => { statusEl.textContent = ''; statusEl.style.display = 'none'; };
-
-es.onmessage = (e) => {
-  try {
-    const payload = JSON.parse(e.data);
-    if (payload.type === 'message') {
-      const { message, timestamp, sender, tx } = payload.item;
-      const li = document.createElement('li');
-      li.className = 'msg';
-      const time = new Date(timestamp * 1000).toLocaleTimeString();
-      const explorerUrl = tx ? `https://shannon-explorer.somnia.network/tx/${tx}` : null;
-      const timeHtml = explorerUrl ? `<a href="${explorerUrl}" target="_blank" class="time-link">${time}</a>` : time;
-      const messageHtml = escapeHtml(message);
-      li.innerHTML = `<div class="meta">${timeHtml} — <span class="sender">${sender}</span></div><div class="text">${messageHtml}</div>`;
-  // insert new messages at the top so the list shows newest->oldest
-  listEl.prepend(li);
-  // keep list to recent 100 (remove oldest at bottom)
-  while (listEl.children.length > 100) listEl.removeChild(listEl.lastChild);
-    }
-  } catch (err) {
-    console.error('Invalid event data', err);
-  }
-};
 
 function escapeHtml(s) {
   return (s + '')
