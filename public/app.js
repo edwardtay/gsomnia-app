@@ -88,7 +88,7 @@ async function fetchStreamInfo() {
     });
     streamInfoEl.innerHTML = `
       <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-        <div><span class="label">Network:</span> <span class="value">${info.network}</span></div>
+        <div><span class="label">Network:</span> <span class="value">${info.network} | Chain ID: 50312 (0xc488)</span></div>
         <div><span class="label">Stream ID:</span> <span class="value">${shortAddress(info.streamId)}</span> <button class="copy-btn" onclick="copyToClipboard('${info.streamId}', 'Stream ID')">📋</button></div>
         <div><span class="label">Total Messages:</span> <span class="value">${totalMsgs}</span></div>
       </div>
