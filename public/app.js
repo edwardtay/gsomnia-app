@@ -705,6 +705,34 @@ window.claimNFT = async function(milestone) {
   }
   
   try {
+    const chainId = await provider.request({ method: 'eth_chainId' });
+    const somniaChainId = '0xc488';
+    
+    if (chainId !== somniaChainId) {
+      showToast('Switching to Somnia testnet...', 'success');
+      try {
+        await provider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: somniaChainId }]
+        });
+      } catch (switchError) {
+        if (switchError.code === 4902) {
+          await provider.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: somniaChainId,
+              chainName: 'Somnia Testnet',
+              nativeCurrency: { name: 'STT', symbol: 'STT', decimals: 18 },
+              rpcUrls: ['https://dream-rpc.somnia.network'],
+              blockExplorerUrls: ['https://shannon-explorer.somnia.network']
+            }]
+          });
+        } else {
+          throw switchError;
+        }
+      }
+    }
+    
     showToast('Claiming NFT...', 'success');
     
     const data = provider.request({
