@@ -59,7 +59,7 @@ function persistPresetCounts() {
 }
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json({ limit: '100kb' }));
 app.use(express.static('public'));
@@ -318,6 +318,20 @@ app.get('/tx/:hash', async (req, res) => {
 
 function escapeHtml(s) { return (s + '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
 
+async function setMilestoneWinner(milestone, winner) {
+  try {
+    const NFT_ADDRESS = '0x1330fF8C16fDDF65e3A09e3c552C43B9D930C216';
+    const walletClient = createWalletClient({ account: privateKeyToAccount(process.env.PRIVATE_KEY), chain: dreamChain, transport: http() });
+    const data = `0x${Buffer.from('setMilestoneWinner(uint256,address)').toString('hex').slice(0, 8)}${milestone.toString(16).padStart(64, '0')}${winner.slice(2).padStart(64, '0')}`;
+    await walletClient.sendTransaction({ to: NFT_ADDRESS, data });
+    console.log(`Set milestone ${milestone} winner: ${winner}`);
+  } catch (err) {
+    console.error(`Failed to set milestone ${milestone}:`, err.message);
+  }
+}
+
+const setMilestones = new Set();
+
 async function startPolling() {
   const publisherWallet = process.env.PUBLISHER_WALLET || process.env.PUBLIC_KEY;
   if (!publisherWallet) {
@@ -351,7 +365,8 @@ async function startPolling() {
       const allData = await sdk.streams.getAllPublisherDataForSchema(schemaId, publisherWallet);
       if (!allData || !Array.isArray(allData)) return;
 
-      for (const dataItem of allData) {
+      for (let i = 0; i < allData.length; i++) {
+        const dataItem = allData[i];
         let message = '', timestamp = '', sender = '';
         for (const field of dataItem) {
           const val = field.value?.value ?? field.value;
@@ -360,7 +375,6 @@ async function startPolling() {
           if (field.name === 'sender') sender = val;
         }
         const id = `${timestamp}-${message}-${sender}`;
-        // record sender observed
         if (sender) allSenders.add(sender.toLowerCase());
         if (!seen.has(id)) {
           seen.add(id);
@@ -368,6 +382,12 @@ async function startPolling() {
           const item = { message, timestamp: Number(timestamp), sender, tx };
           console.log('New:', item);
           sendEvent({ type: 'message', item });
+        }
+        
+        const msgNum = i + 1;
+        if (msgNum % 10 === 0 && !setMilestones.has(msgNum)) {
+          setMilestones.add(msgNum);
+          setMilestoneWinner(msgNum, sender);
         }
       }
     } catch (err) {
