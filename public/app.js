@@ -741,6 +741,7 @@ async function claimNFT(milestone) {
         from: signerAddress,
         to: NFT_CONTRACT,
         value: '0x0',
+        gas: '0x56ce',
         data: '0x379607f5' + milestone.toString(16).padStart(64, '0')
       }]
     });
