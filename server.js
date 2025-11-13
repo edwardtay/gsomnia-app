@@ -241,6 +241,39 @@ app.get('/leaderboard', (req, res) => {
   }
 });
 
+app.post('/sync-winners', async (req, res) => {
+  try {
+    const publisherWallet = process.env.PUBLISHER_WALLET || process.env.PUBLIC_KEY;
+    if (!publisherWallet) return res.status(400).json({ error: 'PUBLISHER_WALLET not set' });
+    
+    const publicClient = createPublicClient({ chain: dreamChain, transport: http() });
+    const sdk = new SDK({ public: publicClient });
+    const helloSchema = `string message, uint256 timestamp, address sender`;
+    const schemaId = await sdk.streams.computeSchemaId(helloSchema);
+    const allData = await sdk.streams.getAllPublisherDataForSchema(schemaId, publisherWallet);
+    
+    const synced = [];
+    for (let i = 0; i < allData.length; i++) {
+      const msgNum = i + 1;
+      if (msgNum % 10 === 0 && !setMilestones.has(msgNum)) {
+        const dataItem = allData[i];
+        let sender = '';
+        for (const field of dataItem) {
+          const val = field.value?.value ?? field.value;
+          if (field.name === 'sender') sender = val;
+        }
+        setMilestones.add(msgNum);
+        await setMilestoneWinner(msgNum, sender);
+        synced.push({ milestone: msgNum, winner: sender });
+      }
+    }
+    
+    return res.json({ ok: true, synced });
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
 // publish endpoint
 app.post('/publish', async (req, res) => {
   const { message, timestamp, signer, signature } = req.body || {};
@@ -322,7 +355,9 @@ async function setMilestoneWinner(milestone, winner) {
   try {
     const NFT_ADDRESS = '0x1330fF8C16fDDF65e3A09e3c552C43B9D930C216';
     const walletClient = createWalletClient({ account: privateKeyToAccount(process.env.PRIVATE_KEY), chain: dreamChain, transport: http() });
-    const data = `0x${Buffer.from('setMilestoneWinner(uint256,address)').toString('hex').slice(0, 8)}${milestone.toString(16).padStart(64, '0')}${winner.slice(2).padStart(64, '0')}`;
+    const { keccak256, toBytes } = require('viem');
+    const selector = keccak256(toBytes('setMilestoneWinner(uint256,address)')).slice(0, 10);
+    const data = selector + milestone.toString(16).padStart(64, '0') + winner.slice(2).padStart(64, '0');
     await walletClient.sendTransaction({ to: NFT_ADDRESS, data });
     console.log(`Set milestone ${milestone} winner: ${winner}`);
   } catch (err) {
@@ -404,6 +439,26 @@ async function startPolling() {
   // first poll quickly, then every 3s
   await pollOnce();
   setInterval(pollOnce, 3000);
+  
+  // sync winners on startup
+  setTimeout(async () => {
+    try {
+      const allData = await sdk.streams.getAllPublisherDataForSchema(schemaId, publisherWallet);
+      for (let i = 0; i < allData.length; i++) {
+        const msgNum = i + 1;
+        if (msgNum % 10 === 0 && !setMilestones.has(msgNum)) {
+          const dataItem = allData[i];
+          let sender = '';
+          for (const field of dataItem) {
+            const val = field.value?.value ?? field.value;
+            if (field.name === 'sender') sender = val;
+          }
+          setMilestones.add(msgNum);
+          await setMilestoneWinner(msgNum, sender);
+        }
+      }
+    } catch (e) { console.error('Initial winner sync failed:', e.message); }
+  }, 2000);
 }
 
 startPolling().catch(err => console.error('Polling failed to start:', err));
