@@ -687,7 +687,7 @@ if (aiSendBtn && aiInput) {
 }
 
 // NFT Claim functionality
-const NFT_CONTRACT = '0xd2b24B1a5345C17c0BCC022Ac0b2123353bd2122';
+const NFT_CONTRACT = '0x1330fF8C16fDDF65e3A09e3c552C43B9D930C216';
 const NFT_ABI = [
   {
     "inputs": [{"internalType": "uint256", "name": "milestone", "type": "uint256"}],
