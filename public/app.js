@@ -705,7 +705,12 @@ async function claimNFT(milestone) {
   }
   
   try {
+    console.log('Claiming NFT for milestone:', milestone);
+    console.log('Signer address:', signerAddress);
+    console.log('NFT Contract:', NFT_CONTRACT);
+    
     const chainId = await provider.request({ method: 'eth_chainId' });
+    console.log('Current chain ID:', chainId);
     const somniaChainId = '0xc488';
     
     if (chainId !== somniaChainId) {
@@ -733,6 +738,37 @@ async function claimNFT(milestone) {
       }
     }
     
+    const calldata = '0x379607f5' + milestone.toString(16).padStart(64, '0');
+    console.log('Calldata:', calldata);
+    
+    try {
+      const estimateGas = await provider.request({
+        method: 'eth_estimateGas',
+        params: [{
+          from: signerAddress,
+          to: NFT_CONTRACT,
+          data: calldata
+        }]
+      });
+      console.log('Estimated gas:', estimateGas);
+    } catch (estimateErr) {
+      console.error('Gas estimation failed:', estimateErr);
+      const errMsg = estimateErr.message || String(estimateErr);
+      if (errMsg.includes('Already claimed')) {
+        showToast('NFT already claimed for this milestone', 'error');
+        return;
+      }
+      if (errMsg.includes('Not the milestone sender')) {
+        showToast('You are not the milestone sender', 'error');
+        return;
+      }
+      if (errMsg.includes('Milestone not reached')) {
+        showToast('Milestone not reached yet', 'error');
+        return;
+      }
+      throw estimateErr;
+    }
+    
     showToast('Claiming NFT...', 'success');
     
     const tx = await provider.request({
@@ -740,17 +776,21 @@ async function claimNFT(milestone) {
       params: [{
         from: signerAddress,
         to: NFT_CONTRACT,
-        data: '0x379607f5' + milestone.toString(16).padStart(64, '0')
+        data: calldata
       }]
     });
+    
+    console.log('Transaction hash:', tx);
     showToast(`NFT claim submitted! Tx: ${tx.slice(0,10)}...`, 'success');
     
     setTimeout(() => {
       alert(`🎉 NFT Claimed!\n\nMilestone: #${milestone}\nTransaction: ${tx}\n\nView on explorer:\nhttps://shannon-explorer.somnia.network/tx/${tx}`);
     }, 1000);
   } catch (err) {
-    console.error('Claim error:', err);
-    showToast('Claim failed: ' + (err.message || String(err)), 'error');
+    console.error('Claim error details:', err);
+    let errorMsg = err.message || String(err);
+    if (err.data?.message) errorMsg = err.data.message;
+    showToast('Claim failed: ' + errorMsg, 'error');
   }
 }
 
