@@ -698,7 +698,7 @@ const NFT_ABI = [
   }
 ];
 
-window.claimNFT = async function(milestone) {
+async function claimNFT(milestone) {
   if (!signerAddress || !provider) {
     showToast('Connect wallet first', 'error');
     return;
@@ -735,16 +735,15 @@ window.claimNFT = async function(milestone) {
     
     showToast('Claiming NFT...', 'success');
     
-    const data = provider.request({
+    const tx = await provider.request({
       method: 'eth_sendTransaction',
       params: [{
         from: signerAddress,
         to: NFT_CONTRACT,
+        value: '0x0',
         data: '0x379607f5' + milestone.toString(16).padStart(64, '0')
       }]
     });
-    
-    const tx = await data;
     showToast(`NFT claim submitted! Tx: ${tx.slice(0,10)}...`, 'success');
     
     setTimeout(() => {
@@ -755,3 +754,5 @@ window.claimNFT = async function(milestone) {
     showToast('Claim failed: ' + (err.message || String(err)), 'error');
   }
 }
+
+window.claimNFT = claimNFT;
