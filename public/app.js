@@ -93,7 +93,7 @@ async function fetchStreamInfo() {
         <div><span class="label">Total Messages:</span> <span class="value">${totalMsgs}</span></div>
       </div>
       <div style="background:#fafafa;border-left:3px solid #000000;padding:8px 12px;border-radius:4px;font-size:12px;color:#000000;">
-        <strong style="color:#000000;">ℹ️ How it works:</strong> Somnia Streams requires registered publishers. You sign messages (free), server publishes on your behalf (server pays gas). Your address is stored as the sender.
+        <strong style="color:#000000;">ℹ️ How it works:</strong> You publish directly to Somnia Streams from your wallet. You pay gas and your address is the on-chain transaction signer.
       </div>
     `;
     
@@ -454,7 +454,7 @@ if (connectBtn) {
 
 if (sendBtn) {
   sendBtn.addEventListener('click', async () => {
-    if (!signerAddress) {
+    if (!signerAddress || !provider) {
       resultEl.textContent = 'Connect wallet first';
       return;
     }
@@ -463,70 +463,60 @@ if (sendBtn) {
       resultEl.textContent = 'Enter a message';
       return;
     }
-    const timestamp = Math.floor(Date.now() / 1000);
-    const payload = JSON.stringify({ message, timestamp });
     
     try {
-      const toHex = (s) => '0x' + Array.from(new TextEncoder().encode(s)).map(b => b.toString(16).padStart(2, '0')).join('');
-      let signature = null;
-      const attempts = [
-        { method: 'personal_sign', params: [payload, signerAddress] },
-        { method: 'personal_sign', params: [toHex(payload), signerAddress] },
-      ];
-      for (const attempt of attempts) {
-        try {
-          signature = await provider.request(attempt);
-          if (signature) break;
-        } catch (err) {}
+      resultEl.textContent = 'Publishing to Somnia Streams...';
+      
+      const chainId = await provider.request({ method: 'eth_chainId' });
+      if (chainId !== '0xc488') {
+        await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0xc488' }] });
       }
-      if (!signature) throw new Error('Failed to sign');
       
-      resultEl.textContent = 'Publishing...';
-      const PRESETS = ['gsomnia', '$SOMI to da moon', 'LFG somnia'];
-      let usedPreset = null;
-      for (const p of PRESETS) if (p === message) { usedPreset = p; break; }
+      const { createPublicClient, createWalletClient, custom, http } = window.viem;
+      const { SDK, SchemaEncoder } = window.SomniaStreams;
       
-      const resp = await fetch('/publish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, timestamp, signer: signerAddress, signature, preset: usedPreset }),
-      });
-      const json = await resp.json();
-      if (!resp.ok) {
-        let errorMsg = json.details || json.error || JSON.stringify(json);
-        if (errorMsg.includes('insufficient balance')) errorMsg = 'Insufficient gas';
-        resultEl.textContent = `Failed: ${errorMsg}`;
-        showToast(errorMsg, 'error');
+      const dreamChain = { id: 50312, name: 'Somnia Testnet', rpcUrls: { default: { http: ['https://dream-rpc.somnia.network'] } } };
+      const publicClient = createPublicClient({ chain: dreamChain, transport: http('https://dream-rpc.somnia.network') });
+      const walletClient = createWalletClient({ account: signerAddress, chain: dreamChain, transport: custom(provider) });
+      
+      const sdk = new SDK({ public: publicClient, wallet: walletClient });
+      const helloSchema = `string message, uint256 timestamp, address sender`;
+      const schemaId = await sdk.streams.computeSchemaId(helloSchema);
+      const encoder = new SchemaEncoder(helloSchema);
+      
+      const timestamp = Math.floor(Date.now() / 1000);
+      const data = encoder.encodeData([
+        { name: 'message', value: message, type: 'string' },
+        { name: 'timestamp', value: BigInt(timestamp), type: 'uint256' },
+        { name: 'sender', value: signerAddress, type: 'address' },
+      ]);
+      
+      const idHex = `0x${Array.from(new TextEncoder().encode(`hello-${timestamp}`)).map(b => b.toString(16).padStart(2, '0')).join('').padEnd(64, '0')}`;
+      const dataStreams = [{ id: idHex, schemaId, data }];
+      
+      const tx = await sdk.streams.set(dataStreams);
+      const txHash = typeof tx === 'string' ? tx : tx?.hash;
+      
+      if (txHash) {
+        const explorerUrl = `https://shannon-explorer.somnia.network/tx/${txHash}`;
+        resultEl.innerHTML = `Published — tx: <a href="${explorerUrl}" target="_blank">${shortAddress(txHash)}</a> <button class="copy-btn" onclick="copyToClipboard('${txHash}', 'Tx hash')">📋</button>`;
+        showToast('Message published!', 'success');
       } else {
-        const txHash = json.tx;
-        if (txHash) {
-          const explorerUrl = `https://shannon-explorer.somnia.network/tx/${txHash}`;
-          resultEl.innerHTML = `Published — tx: <a href="${explorerUrl}" target="_blank" style="color:#60a5fa;">${shortAddress(txHash)}</a> <button class="copy-btn" onclick="copyToClipboard('${txHash}', 'Tx hash')">📋</button>`;
-          totalGasUsed += 0.001;
-          showToast('Message published!', 'success');
-        } else {
-          resultEl.textContent = 'Published';
-          showToast('Message published!', 'success');
-        }
-        msgEl.value = '';
-        if (charCount) charCount.textContent = '0/280';
-        await updateBalance(true);
-        setTimeout(async () => {
-          await loadHistorical();
-          const msgCount = allMessages.length;
-          if (msgCount % 10 === 0 && msgCount > 0) {
-            const winner = allMessages[allMessages.length - 1];
-            if (winner.sender.toLowerCase() === signerAddress.toLowerCase()) {
-              showToast(`🏆 Congratulations! You sent the ${msgCount}th message and won a reward!`, 'success');
-              setTimeout(() => {
-                alert(`🏆 MILESTONE WINNER!\n\nYou sent the ${msgCount}th message!\n\nYour winning address:\n${signerAddress}\n\nHOW TO CLAIM YOUR NFT:\n1. Copy your address above\n2. Verify on Somnia Explorer (check tx link)\n3. Contact team with proof\n4. Receive NFT airdrop to your address\n\nCongratulations! 🎉`);
-              }, 1000);
-            }
-          }
-        }, 2000);
+        resultEl.textContent = 'Published';
+        showToast('Message published!', 'success');
       }
+      
+      msgEl.value = '';
+      if (charCount) charCount.textContent = '0/280';
+      await updateBalance(true);
+      setTimeout(() => loadHistorical(), 2000);
     } catch (err) {
-      resultEl.textContent = `Error: ${String(err)}`;
+      console.error('Publish error:', err);
+      let errorMsg = err.message || String(err);
+      if (errorMsg.includes('insufficient')) errorMsg = 'Insufficient gas - get testnet tokens';
+      if (errorMsg.includes('unauthorized') || errorMsg.includes('not authorized')) errorMsg = 'Not authorized as publisher - contact admin';
+      resultEl.textContent = `Failed: ${errorMsg}`;
+      showToast(errorMsg, 'error');
     }
   });
 }
