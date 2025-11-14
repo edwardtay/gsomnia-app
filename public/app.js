@@ -92,8 +92,8 @@ async function fetchStreamInfo() {
         <div><span class="label">Stream ID:</span> <span class="value">${shortAddress(info.streamId)}</span> <button class="copy-btn" onclick="copyToClipboard('${info.streamId}', 'Stream ID')">📋</button></div>
         <div><span class="label">Total Messages:</span> <span class="value">${totalMsgs}</span></div>
       </div>
-      <div style="background:rgba(168,85,247,0.1);border-left:3px solid #a855f7;padding:8px 12px;border-radius:4px;font-size:12px;color:#cbd5e1;">
-        <strong style="color:#a855f7;">ℹ️ How it works:</strong> Somnia Streams requires registered publishers. You sign messages (free), server publishes on your behalf (server pays gas). Your address is stored as the sender.
+      <div style="background:#fafafa;border-left:3px solid #000000;padding:8px 12px;border-radius:4px;font-size:12px;color:#000000;">
+        <strong style="color:#000000;">ℹ️ How it works:</strong> Somnia Streams requires registered publishers. You sign messages (free), server publishes on your behalf (server pays gas). Your address is stored as the sender.
       </div>
     `;
     
