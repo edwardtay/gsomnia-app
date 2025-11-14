@@ -87,10 +87,13 @@ async function fetchStreamInfo() {
       return { milestone: m, sender: msg.sender };
     });
     streamInfoEl.innerHTML = `
-      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:8px;">
         <div><span class="label">Network:</span> <span class="value">${info.network} | Chain ID: 50312 (0xc488)</span></div>
         <div><span class="label">Stream ID:</span> <span class="value">${shortAddress(info.streamId)}</span> <button class="copy-btn" onclick="copyToClipboard('${info.streamId}', 'Stream ID')">📋</button></div>
         <div><span class="label">Total Messages:</span> <span class="value">${totalMsgs}</span></div>
+      </div>
+      <div style="background:rgba(168,85,247,0.1);border-left:3px solid #a855f7;padding:8px 12px;border-radius:4px;font-size:12px;color:#cbd5e1;">
+        <strong style="color:#a855f7;">ℹ️ How it works:</strong> Somnia Streams requires registered publishers. You sign messages (free), server publishes on your behalf (server pays gas). Your address is stored as the sender.
       </div>
     `;
     
