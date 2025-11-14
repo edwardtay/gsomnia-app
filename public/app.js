@@ -713,127 +713,43 @@ async function claimNFT(milestone) {
   }
   
   try {
-    console.log('Claiming NFT for milestone:', milestone);
-    console.log('Signer address:', signerAddress);
-    console.log('NFT Contract:', NFT_CONTRACT);
+    showToast('Syncing milestone data...', 'success');
+    await fetch('/sync-winners', { method: 'POST' });
+    await new Promise(r => setTimeout(r, 2000));
     
     const chainId = await provider.request({ method: 'eth_chainId' });
-    console.log('Current chain ID:', chainId);
     const somniaChainId = '0xc488';
     
     if (chainId !== somniaChainId) {
       showToast('Switching to Somnia testnet...', 'success');
       try {
-        await provider.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: somniaChainId }]
-        });
+        await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: somniaChainId }] });
       } catch (switchError) {
         if (switchError.code === 4902) {
           await provider.request({
             method: 'wallet_addEthereumChain',
-            params: [{
-              chainId: somniaChainId,
-              chainName: 'Somnia Testnet',
-              nativeCurrency: { name: 'STT', symbol: 'STT', decimals: 18 },
-              rpcUrls: ['https://dream-rpc.somnia.network'],
-              blockExplorerUrls: ['https://shannon-explorer.somnia.network']
-            }]
+            params: [{ chainId: somniaChainId, chainName: 'Somnia Testnet', nativeCurrency: { name: 'STT', symbol: 'STT', decimals: 18 }, rpcUrls: ['https://dream-rpc.somnia.network'], blockExplorerUrls: ['https://shannon-explorer.somnia.network'] }]
           });
-        } else {
-          throw switchError;
-        }
+        } else throw switchError;
       }
     }
     
-    // Check contract configuration
-    try {
-      const publisherData = await provider.request({
-        method: 'eth_call',
-        params: [{ to: NFT_CONTRACT, data: '0xbe9a6555' }, 'latest']
-      });
-      const contractPublisher = '0x' + publisherData.slice(-40);
-      console.log('Contract publisher:', contractPublisher);
-      console.log('Expected publisher:', '0x909dAFb395eB281b92B317552E12133098D62881');
-      
-      if (contractPublisher.toLowerCase() !== '0x909dAFb395eB281b92B317552E12133098D62881'.toLowerCase()) {
-        showToast('Contract configured for different publisher', 'error');
-        console.error('Publisher mismatch!');
-        return;
-      }
-    } catch (configErr) {
-      console.error('Contract config check failed:', configErr);
-    }
-    
+    const NFT_CONTRACT = '0x1330fF8C16fDDF65e3A09e3c552C43B9D930C216';
     const calldata = '0x379607f5' + milestone.toString(16).padStart(64, '0');
-    console.log('Calldata:', calldata);
-    
-    try {
-      const estimateGas = await provider.request({
-        method: 'eth_estimateGas',
-        params: [{
-          from: signerAddress,
-          to: NFT_CONTRACT,
-          data: calldata
-        }]
-      });
-      console.log('Estimated gas:', estimateGas);
-    } catch (estimateErr) {
-      console.error('Gas estimation failed:', estimateErr);
-      
-      // Try to decode revert reason
-      if (estimateErr.data?.data) {
-        try {
-          const revertData = estimateErr.data.data;
-          const reason = new TextDecoder().decode(new Uint8Array(revertData.match(/.{1,2}/g).map(byte => parseInt(byte, 16))));
-          console.log('Decoded revert:', reason);
-          showToast('Claim failed: ' + reason, 'error');
-          return;
-        } catch (decodeErr) {}
-      }
-      
-      const errMsg = estimateErr.message || String(estimateErr);
-      if (errMsg.includes('Already claimed')) {
-        showToast('NFT already claimed for this milestone', 'error');
-        return;
-      }
-      if (errMsg.includes('Not the milestone sender')) {
-        showToast('You are not the milestone sender', 'error');
-        return;
-      }
-      if (errMsg.includes('Milestone not reached')) {
-        showToast('Milestone not reached yet', 'error');
-        return;
-      }
-      if (errMsg.includes('execution reverted')) {
-        showToast('Contract rejected claim - milestone winner not set or already claimed', 'error');
-        return;
-      }
-      throw estimateErr;
-    }
     
     showToast('Claiming NFT...', 'success');
+    const tx = await provider.request({ method: 'eth_sendTransaction', params: [{ from: signerAddress, to: NFT_CONTRACT, data: calldata }] });
     
-    const tx = await provider.request({
-      method: 'eth_sendTransaction',
-      params: [{
-        from: signerAddress,
-        to: NFT_CONTRACT,
-        data: calldata
-      }]
-    });
-    
-    console.log('Transaction hash:', tx);
-    showToast(`NFT claim submitted! Tx: ${tx.slice(0,10)}...`, 'success');
-    
+    showToast(`🎉 NFT Claimed! Tx: ${tx.slice(0,10)}...`, 'success');
     setTimeout(() => {
       alert(`🎉 NFT Claimed!\n\nMilestone: #${milestone}\nTransaction: ${tx}\n\nView on explorer:\nhttps://shannon-explorer.somnia.network/tx/${tx}`);
     }, 1000);
   } catch (err) {
-    console.error('Claim error details:', err);
-    let errorMsg = err.message || String(err);
-    if (err.data?.message) errorMsg = err.data.message;
-    showToast('Claim failed: ' + errorMsg, 'error');
+    console.error('Claim error:', err);
+    const errMsg = err.message || String(err);
+    if (errMsg.includes('Already claimed')) showToast('Already claimed', 'error');
+    else if (errMsg.includes('Not the milestone winner')) showToast('Not the milestone winner', 'error');
+    else showToast('Claim failed: ' + errMsg, 'error');
   }
 }
 

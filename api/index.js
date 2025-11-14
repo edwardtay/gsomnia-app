@@ -148,6 +148,8 @@ app.post('/sync-winners', async (req, res) => {
   }
 });
 
+
+
 app.post('/publish', async (req, res) => {
   const { message, timestamp, signer, signature } = req.body || {};
   if (!message || !timestamp || !signer || !signature) return res.status(400).json({ error: 'missing fields' });
