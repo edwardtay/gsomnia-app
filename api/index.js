@@ -107,6 +107,47 @@ app.get('/stats', async (req, res) => {
   }
 });
 
+app.post('/sync-winners', async (req, res) => {
+  try {
+    const publisherWallet = process.env.PUBLISHER_WALLET || process.env.PUBLIC_KEY;
+    if (!publisherWallet) return res.status(400).json({ error: 'PUBLISHER_WALLET not set' });
+    if (!process.env.PRIVATE_KEY) return res.status(500).json({ error: 'PRIVATE_KEY not set' });
+    
+    const publicClient = createPublicClient({ chain: dreamChain, transport: http() });
+    const sdk = new SDK({ public: publicClient });
+    const helloSchema = `string message, uint256 timestamp, address sender`;
+    const schemaId = await sdk.streams.computeSchemaId(helloSchema);
+    const allData = await sdk.streams.getAllPublisherDataForSchema(schemaId, publisherWallet);
+    
+    const walletClient = createWalletClient({ account: privateKeyToAccount(process.env.PRIVATE_KEY), chain: dreamChain, transport: http() });
+    const NFT_ADDRESS = '0x1330fF8C16fDDF65e3A09e3c552C43B9D930C216';
+    const { keccak256, toBytes } = require('viem');
+    const selector = keccak256(toBytes('setMilestoneWinner(uint256,address)')).slice(0, 10);
+    
+    const synced = [];
+    for (let i = 0; i < allData.length; i++) {
+      const msgNum = i + 1;
+      if (msgNum % 10 === 0) {
+        const dataItem = allData[i];
+        let sender = '';
+        for (const field of dataItem) {
+          const val = field.value?.value ?? field.value;
+          if (field.name === 'sender') sender = val;
+        }
+        try {
+          const data = selector + msgNum.toString(16).padStart(64, '0') + sender.slice(2).padStart(64, '0');
+          await walletClient.sendTransaction({ to: NFT_ADDRESS, data });
+          synced.push({ milestone: msgNum, winner: sender });
+        } catch (e) { /* already set */ }
+      }
+    }
+    
+    return res.json({ ok: true, synced });
+  } catch (err) {
+    return res.status(500).json({ error: String(err) });
+  }
+});
+
 app.post('/publish', async (req, res) => {
   const { message, timestamp, signer, signature } = req.body || {};
   if (!message || !timestamp || !signer || !signature) return res.status(400).json({ error: 'missing fields' });

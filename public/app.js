@@ -284,6 +284,14 @@ function applySearch() {
   renderPage(1);
 }
 
+// Auto-sync winners on load
+async function autoSyncWinners() {
+  try {
+    await fetch('/sync-winners', { method: 'POST' });
+  } catch (e) {}
+}
+autoSyncWinners();
+
 // fetch stream info once
 fetchStreamInfo();
 
@@ -772,6 +780,18 @@ async function claimNFT(milestone) {
       console.log('Estimated gas:', estimateGas);
     } catch (estimateErr) {
       console.error('Gas estimation failed:', estimateErr);
+      
+      // Try to decode revert reason
+      if (estimateErr.data?.data) {
+        try {
+          const revertData = estimateErr.data.data;
+          const reason = new TextDecoder().decode(new Uint8Array(revertData.match(/.{1,2}/g).map(byte => parseInt(byte, 16))));
+          console.log('Decoded revert:', reason);
+          showToast('Claim failed: ' + reason, 'error');
+          return;
+        } catch (decodeErr) {}
+      }
+      
       const errMsg = estimateErr.message || String(estimateErr);
       if (errMsg.includes('Already claimed')) {
         showToast('NFT already claimed for this milestone', 'error');
@@ -783,6 +803,10 @@ async function claimNFT(milestone) {
       }
       if (errMsg.includes('Milestone not reached')) {
         showToast('Milestone not reached yet', 'error');
+        return;
+      }
+      if (errMsg.includes('execution reverted')) {
+        showToast('Contract rejected claim - milestone winner not set or already claimed', 'error');
         return;
       }
       throw estimateErr;
