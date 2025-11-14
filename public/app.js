@@ -100,7 +100,7 @@ async function fetchStreamInfo() {
     const milestoneWinnersEl = document.getElementById('milestone-winners');
     if (milestoneWinnersEl) {
       if (rewardWinners.length > 0) {
-        milestoneWinnersEl.innerHTML = `<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);padding:12px;border-radius:8px;"><div style="color:#10b981;font-weight:600;margin-bottom:8px;">🏆 NFT Reward Winners:</div>${rewardWinners.map(w => `<div style="margin-top:6px;color:#e2e8f0;display:flex;justify-content:space-between;align-items:center;padding:4px 0;"><span><strong>#${w.milestone}:</strong> ${shortAddress(w.sender)}</span><button class="copy-btn" onclick="copyToClipboard('${w.sender}', '#${w.milestone} winner')" style="color:#10b981;">📋 Copy</button></div>`).join('')}</div>`;
+        milestoneWinnersEl.innerHTML = `<div style="background:#fafafa;border:1px solid #e5e5e5;padding:12px;border-radius:8px;"><div style="color:#000000;font-weight:600;margin-bottom:8px;">🏆 NFT Reward Winners:</div>${rewardWinners.map(w => `<div style="margin-top:6px;color:#000000;display:flex;justify-content:space-between;align-items:center;padding:4px 0;"><span><strong>#${w.milestone}:</strong> ${shortAddress(w.sender)}</span><button class="copy-btn" onclick="copyToClipboard('${w.sender}', '#${w.milestone} winner')">📋 Copy</button></div>`).join('')}</div>`;
       } else {
         milestoneWinnersEl.innerHTML = '';
       }
@@ -111,7 +111,7 @@ async function fetchStreamInfo() {
     if (claimSectionEl && signerAddress) {
       const userWins = rewardWinners.filter(w => w.sender.toLowerCase() === signerAddress.toLowerCase());
       if (userWins.length > 0) {
-        claimSectionEl.innerHTML = `<div style="background:rgba(16,185,129,0.15);border:2px solid rgba(16,185,129,0.4);padding:16px;border-radius:8px;text-align:center;"><div style="color:#10b981;font-weight:700;font-size:16px;margin-bottom:12px;">🎉 You Won! Claim Your NFT</div><div style="color:#e2e8f0;margin-bottom:12px;font-size:14px;">You sent milestone message(s): ${userWins.map(w => `#${w.milestone}`).join(', ')}</div>${userWins.map(w => `<button onclick="claimNFT(${w.milestone})" class="wallet-btn" style="margin:4px;">🏆 Claim #${w.milestone} NFT</button>`).join('')}</div>`;
+        claimSectionEl.innerHTML = `<div style="background:#fafafa;border:2px solid #000000;padding:16px;border-radius:8px;text-align:center;"><div style="color:#000000;font-weight:700;font-size:16px;margin-bottom:12px;">🎉 You Won! Claim Your NFT</div><div style="color:#000000;margin-bottom:12px;font-size:14px;">You sent milestone message(s): ${userWins.map(w => `#${w.milestone}`).join(', ')}</div>${userWins.map(w => `<button onclick="claimNFT(${w.milestone})" class="wallet-btn" style="margin:4px;">🏆 Claim #${w.milestone} NFT</button>`).join('')}</div>`;
       } else {
         claimSectionEl.innerHTML = '';
       }
