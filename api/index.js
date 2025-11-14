@@ -148,6 +148,44 @@ app.post('/sync-winners', async (req, res) => {
   }
 });
 
+app.post('/publish', async (req, res) => {
+  const { message, timestamp, signer, signature } = req.body || {};
+  if (!message || !timestamp || !signer || !signature) return res.status(400).json({ error: 'missing fields' });
+
+  try {
+    const payload = JSON.stringify({ message, timestamp });
+    const recovered = verifyMessage(payload, signature);
+    if (recovered.toLowerCase() !== signer.toLowerCase()) return res.status(400).json({ error: 'signature mismatch' });
+  } catch (err) { return res.status(400).json({ error: 'invalid signature' }); }
+
+  if (!process.env.PRIVATE_KEY) return res.status(500).json({ error: 'server missing PRIVATE_KEY' });
+
+  try {
+    const publicClient = createPublicClient({ chain: dreamChain, transport: http() });
+    const walletClient = createWalletClient({ account: privateKeyToAccount(process.env.PRIVATE_KEY), chain: dreamChain, transport: http() });
+    const sdkPubl = new SDK({ public: publicClient, wallet: walletClient });
+    const helloSchema = `string message, uint256 timestamp, address sender`;
+    const schemaId = await sdkPubl.streams.computeSchemaId(helloSchema);
+    const encoder = new SchemaEncoder(helloSchema);
+    const data = encoder.encodeData([
+      { name: 'message', value: message, type: 'string' },
+      { name: 'timestamp', value: BigInt(timestamp), type: 'uint256' },
+      { name: 'sender', value: signer, type: 'address' },
+    ]);
+    const idHex = toHex(`hello-${timestamp}`, { size: 32 });
+    const dataStreams = [{ id: idHex, schemaId, data }];
+    const tx = await sdkPubl.streams.set(dataStreams);
+    let txHash = null;
+    if (typeof tx === 'string') txHash = tx;
+    else if (tx?.hash) txHash = tx.hash;
+
+    const explorerBase = process.env.EXPLORER_TX_URL || null;
+    return res.json({ ok: true, tx: txHash, explorer: explorerBase ? `${explorerBase}${txHash}` : null });
+  } catch (err) {
+    return res.status(500).json({ error: 'publish failed', details: String(err) });
+  }
+});
+
 
 
 
